@@ -120,20 +120,20 @@ module Authorization
 
     def load_controller_object (context) # :nodoc:
       instance_var = :"@#{context.to_s.singularize}"
-      model = context.to_s.classify.constantize
+      model = model_class_from_context_name(context)
       instance_variable_set(instance_var, model.find(params[:id]))
     end
 
     def load_parent_controller_object (parent_context) # :nodoc:
       instance_var = :"@#{parent_context.to_s.singularize}"
-      model = parent_context.to_s.classify.constantize
+      model = model_class_from_context_name(parent_context)
       instance_variable_set(instance_var, model.find(params[:"#{parent_context.to_s.singularize}_id"]))
     end
 
     def new_controller_object_from_params (context, parent_context) # :nodoc:
       model_or_proxy = parent_context ?
            instance_variable_get(:"@#{parent_context.to_s.singularize}").send(context.to_sym) :
-           context.to_s.classify.constantize
+           model_class_from_context_name(context)
       instance_var = :"@#{context.to_s.singularize}"
       instance_variable_set(instance_var,
           model_or_proxy.new(params[context.to_s.singularize]))
@@ -142,9 +142,13 @@ module Authorization
     def new_controller_object_for_collection (context, parent_context) # :nodoc:
       model_or_proxy = parent_context ?
            instance_variable_get(:"@#{parent_context.to_s.singularize}").send(context.to_sym) :
-           context.to_s.classify.constantize
+           model_class_from_context_name(context)
       instance_var = :"@#{context.to_s.singularize}"
       instance_variable_set(instance_var, model_or_proxy.new)
+    end
+
+    def model_class_from_context_name(context)
+      context.to_s.classify.singularize.constantize
     end
 
     module ClassMethods
@@ -575,7 +579,7 @@ module Authorization
       elsif @load_object_method and @load_object_method.is_a?(Proc)
         contr.instance_eval(&@load_object_method)
       else
-        load_object_model = @load_object_model || context.to_s.classify.constantize
+        load_object_model = @load_object_model || context.to_s.classify.singularize.constantize
         instance_var = :"@#{load_object_model.name.underscore}"
         object = contr.instance_variable_get(instance_var)
         unless object
